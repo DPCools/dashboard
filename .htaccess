@@ -1,0 +1,51 @@
+# Enable rewrite engine
+RewriteEngine On
+
+# Allow direct access to public folder (icons, assets, etc.)
+RewriteCond %{REQUEST_URI} ^/dashboard/public/
+RewriteRule ^ - [L]
+
+# Redirect to index.php if file doesn't exist
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteCond %{REQUEST_URI} !^/dashboard/(login|logout|setup)\.php
+RewriteRule ^(.*)$ index.php [QSA,L]
+
+# Security headers
+<IfModule mod_headers.c>
+    # Prevent clickjacking
+    Header always set X-Frame-Options "SAMEORIGIN"
+
+    # XSS protection
+    Header always set X-XSS-Protection "1; mode=block"
+
+    # Prevent MIME sniffing
+    Header always set X-Content-Type-Options "nosniff"
+
+    # Referrer policy
+    Header always set Referrer-Policy "strict-origin-when-cross-origin"
+</IfModule>
+
+# Disable directory browsing
+Options -Indexes
+
+# Protect sensitive files
+<FilesMatch "^(\.env|\.git|CLAUDE\.md|PLANNING\.md|TASK\.md|composer\.(json|lock)|package(-lock)?\.json)$">
+    Order allow,deny
+    Deny from all
+</FilesMatch>
+
+# Prevent access to database file
+<FilesMatch "\.db$">
+    Order allow,deny
+    Deny from all
+</FilesMatch>
+
+# Allow SVG files with proper headers
+<FilesMatch "\.(svg)$">
+    <IfModule mod_headers.c>
+        Header set Content-Type "image/svg+xml"
+        Header set Cache-Control "public, max-age=31536000"
+        Header set X-Content-Type-Options "nosniff"
+    </IfModule>
+</FilesMatch>

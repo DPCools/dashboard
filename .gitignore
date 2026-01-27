@@ -1,0 +1,36 @@
+# Database files (user data)
+data/dashboard.db
+data/dashboard.db-shm
+data/dashboard.db-wal
+
+# Custom uploaded icons
+public/icons/*.svg
+!public/icons/.gitkeep
+
+# PHP session files
+data/sessions/*
+!data/sessions/.gitkeep
+
+# Logs
+*.log
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Temporary files
+*.tmp
+*.bak
+*.old
+
+# Keep directory structure
+!data/.gitkeep
+!database/
+!database/**
