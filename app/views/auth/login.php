@@ -13,6 +13,16 @@
                     Login Required
                 <?php endif; ?>
             </h2>
+            <?php if ($expired): ?>
+                <div class="mt-4 p-4 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg">
+                    <div class="flex items-center">
+                        <i data-lucide="clock" class="w-5 h-5 text-yellow-600 dark:text-yellow-400 mr-2"></i>
+                        <p class="text-sm font-medium text-yellow-800 dark:text-yellow-300">
+                            Your login has expired. Please log in again to continue.
+                        </p>
+                    </div>
+                </div>
+            <?php endif; ?>
             <p class="mt-2 text-center text-sm text-gray-600 dark:text-gray-400">
                 <?php if ($action === 'admin'): ?>
                     Enter the admin password to access settings
@@ -31,6 +41,9 @@
             <?php endif; ?>
             <?php if ($page !== null): ?>
                 <input type="hidden" name="page" value="<?= Security::escape($page['slug']) ?>">
+            <?php endif; ?>
+            <?php if ($returnUrl !== null): ?>
+                <input type="hidden" name="return_url" value="<?= Security::escape($returnUrl) ?>">
             <?php endif; ?>
 
             <div class="rounded-md shadow-sm -space-y-px">

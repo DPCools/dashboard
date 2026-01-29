@@ -416,8 +416,11 @@ let hostModalMode = 'add'; // 'add' or 'edit'
 // Helper function to check for expired session and redirect to login
 function checkSessionExpired(data) {
     if (data.expired && data.redirect) {
-        alert('Your session has expired. Please log in again.');
-        window.location.href = data.redirect;
+        // For commands page, redirect back to /commands after login
+        const returnUrl = '/commands';
+
+        // Redirect to login with expiry flag and return URL
+        window.location.href = data.redirect + '&expired=1&return=' + encodeURIComponent(returnUrl);
         return true;
     }
     return false;

@@ -11,12 +11,14 @@ class AuthController
     {
         // Check if user is already logged in as admin
         if (Auth::isAdmin() && !isset($_GET['page'])) {
-            View::redirect(BASE_URL . '/settings');
+            View::redirect(View::url('/settings'));
             return;
         }
 
         $action = $_GET['action'] ?? null;
         $pageSlug = $_GET['page'] ?? null;
+        $expired = isset($_GET['expired']) && $_GET['expired'] === '1';
+        $returnUrl = $_GET['return'] ?? null;
 
         $page = null;
         if ($pageSlug !== null) {
@@ -28,14 +30,16 @@ class AuthController
 
             // Check if already unlocked
             if (Auth::isPageUnlocked((int) $page['id'])) {
-                View::redirect(BASE_URL . '/?page=' . $pageSlug);
+                View::redirect(View::url('/?page=' . $pageSlug));
                 return;
             }
         }
 
         View::render('auth/login', [
             'action' => $action,
-            'page' => $page
+            'page' => $page,
+            'expired' => $expired,
+            'returnUrl' => $returnUrl
         ]);
     }
 
@@ -47,13 +51,14 @@ class AuthController
         // Validate CSRF token
         if (!Security::validateCSRFToken($_POST['csrf_token'] ?? null)) {
             Auth::setFlashMessage('error', 'Invalid CSRF token. Please try again.');
-            View::redirectBack(BASE_URL . '/login.php');
+            View::redirectBack(View::url('/login.php'));
             return;
         }
 
         $password = $_POST['password'] ?? '';
         $action = $_POST['action'] ?? null;
         $pageSlug = $_POST['page'] ?? null;
+        $returnUrl = $_POST['return_url'] ?? null;
 
         // Reason: Handle admin login
         if ($action === 'admin') {
@@ -62,12 +67,27 @@ class AuthController
             if ($adminPasswordHash !== null && Security::verifyPassword($password, $adminPasswordHash)) {
                 Auth::loginAsAdmin();
                 Auth::setFlashMessage('success', 'Welcome back, admin!');
-                View::redirect(BASE_URL . '/settings');
+
+                // Redirect to return URL if provided, otherwise to settings
+                if ($returnUrl) {
+                    // Handle different return URL formats
+                    if (strpos($returnUrl, '?page=') === 0) {
+                        // Format: ?page=slug
+                        View::redirect(View::url('/' . $returnUrl));
+                    } elseif (strpos($returnUrl, '/') === 0) {
+                        // Format: /path (like /commands)
+                        View::redirect(View::url($returnUrl));
+                    } else {
+                        View::redirect(View::url('/settings'));
+                    }
+                } else {
+                    View::redirect(View::url('/settings'));
+                }
                 return;
             }
 
             Auth::setFlashMessage('error', 'Invalid password.');
-            View::redirectBack(BASE_URL . '/login.php?action=admin');
+            View::redirectBack(View::url('/login.php?action=admin'));
             return;
         }
 
@@ -96,17 +116,17 @@ class AuthController
                 }
 
                 Auth::setFlashMessage('success', 'Page unlocked successfully.');
-                View::redirect(BASE_URL . '/?page=' . $pageSlug);
+                View::redirect(View::url('/?page=' . $pageSlug));
                 return;
             }
 
             Auth::setFlashMessage('error', 'Invalid password.');
-            View::redirectBack(BASE_URL . '/login.php?page=' . urlencode($pageSlug));
+            View::redirectBack(View::url('/login.php?page=' . urlencode($pageSlug)));
             return;
         }
 
         Auth::setFlashMessage('error', 'Invalid login request.');
-        View::redirect(BASE_URL);
+        View::redirect(View::url('/'));
     }
 
     /**
@@ -115,6 +135,6 @@ class AuthController
     public static function logout(): void
     {
         Auth::logout();
-        View::redirect(BASE_URL);
+        View::redirect(View::url('/'));
     }
 }
