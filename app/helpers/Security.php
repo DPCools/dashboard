@@ -59,11 +59,34 @@ class Security
 
         // Reason: Check token expiration to prevent replay attacks
         if ((time() - $tokenTime) > CSRF_TOKEN_LIFETIME) {
+            // Mark session as expired for forced logout
+            $_SESSION['csrf_expired'] = true;
+            error_log('CSRF token expired - session marked for forced logout');
             return false;
         }
 
         // Reason: Use hash_equals to prevent timing attacks
         return hash_equals($storedToken, $token);
+    }
+
+    /**
+     * Check if CSRF token has expired (for forced logout)
+     *
+     * @return bool True if CSRF expired and user should be logged out
+     */
+    public static function isCSRFExpired(): bool
+    {
+        return isset($_SESSION['csrf_expired']) && $_SESSION['csrf_expired'] === true;
+    }
+
+    /**
+     * Force logout due to expired session
+     */
+    public static function forceLogout(): void
+    {
+        if (session_status() === PHP_SESSION_ACTIVE) {
+            session_destroy();
+        }
     }
 
     /**
