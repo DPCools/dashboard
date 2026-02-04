@@ -2,13 +2,15 @@
 RewriteEngine On
 
 # Allow direct access to public folder (icons, assets, etc.)
-RewriteCond %{REQUEST_URI} ^/dashboard/public/
+# This checks if the request URI contains /public/ anywhere in the path
+RewriteCond %{REQUEST_URI} /public/
 RewriteRule ^ - [L]
 
 # Redirect to index.php if file doesn't exist
+# Allow direct access to login.php, logout.php, and setup.php
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
-RewriteCond %{REQUEST_URI} !^/dashboard/(login|logout|setup)\.php
+RewriteCond %{REQUEST_URI} !(login|logout|setup)\.php$
 RewriteRule ^(.*)$ index.php [QSA,L]
 
 # Security headers

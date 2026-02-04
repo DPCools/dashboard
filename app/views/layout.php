@@ -5,6 +5,17 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><?= Security::escape(View::setting('site_title', DEFAULT_SITE_TITLE)) ?></title>
 
+    <?php
+    // Favicon support - Custom SVG icons work best as favicons
+    $favicon = View::setting('favicon', '');
+    $faviconType = View::setting('favicon_type', 'lucide');
+    if (!empty($favicon) && $faviconType === 'custom'):
+        // Custom SVG icon - direct link to SVG file
+        $faviconPath = View::url('/public/icons/' . $favicon);
+    ?>
+    <link rel="icon" type="image/svg+xml" href="<?= $faviconPath ?>">
+    <?php endif; ?>
+
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
 
@@ -14,8 +25,13 @@
     <!-- SortableJS for drag-and-drop -->
     <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
 
+    <!-- Base URL for JavaScript -->
+    <script>
+        window.BASE_URL = '<?= rtrim(View::url(''), '/') ?>';
+    </script>
+
     <!-- Icon Picker -->
-    <script src="<?= View::url('/public/js/icon-picker.js') ?>"></script>
+    <script src="<?= View::url('/public/js/icon-picker.js') ?>?v=<?= APP_VERSION ?>"></script>
 
     <style>
         /* Dark mode support */
@@ -75,7 +91,7 @@
         }
     </style>
 </head>
-<body class="h-full bg-gray-50 dark:bg-gray-900">
+<body class="min-h-screen flex flex-col bg-gray-50 dark:bg-gray-900">
     <!-- Header -->
     <header class="bg-white dark:bg-gray-800 shadow-sm">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
@@ -164,7 +180,7 @@
     <?php endif; ?>
 
     <!-- Main Content -->
-    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <main class="flex-grow max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <?= $content ?>
     </main>
 
@@ -188,7 +204,7 @@
                     <input type="hidden" id="modal-item-id" name="item_id">
                     <div class="mb-4">
                         <label for="modal-password" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Password</label>
-                        <input type="password" id="modal-password" name="password" required
+                        <input type="password" id="modal-password" name="password" required autocomplete="current-password"
                                class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
                                placeholder="Enter password">
                     </div>
@@ -303,24 +319,43 @@
 
         // Service Status Checker
         async function checkServiceStatuses() {
+            console.log('[StatusCheck] Starting status check');
+
             const statusIndicators = document.querySelectorAll('.status-indicator');
-            if (statusIndicators.length === 0) return;
+            console.log('[StatusCheck] Found', statusIndicators.length, 'status indicators');
+
+            if (statusIndicators.length === 0) {
+                console.log('[StatusCheck] No indicators found, exiting');
+                return;
+            }
 
             // Get current page_slug from URL
             const urlParams = new URLSearchParams(window.location.search);
             const pageSlug = urlParams.get('page') || 'main';
+            console.log('[StatusCheck] Checking page:', pageSlug);
 
             try {
-                const response = await fetch(`<?= View::url('/items/status') ?>?page_slug=${encodeURIComponent(pageSlug)}`);
+                // Use BASE_URL for proper path handling in all installation scenarios
+                const url = `${window.BASE_URL}/items/status?page_slug=${encodeURIComponent(pageSlug)}`;
+                console.log('[StatusCheck] Fetching:', url);
+
+                const response = await fetch(url);
+                console.log('[StatusCheck] Response status:', response.status, response.statusText);
+
                 const data = await response.json();
+                console.log('[StatusCheck] Received data:', data);
 
                 if (data.success) {
+                    console.log('[StatusCheck] Processing', Object.keys(data.statuses).length, 'status updates');
+
                     // Update each status indicator
                     statusIndicators.forEach(indicator => {
                         const itemId = indicator.dataset.itemId;
                         const status = data.statuses[itemId];
 
                         if (status) {
+                            console.log('[StatusCheck] Item', itemId, 'status:', status.status);
+
                             // Remove checking animation
                             indicator.classList.remove('animate-pulse', 'bg-gray-400');
 
@@ -334,9 +369,13 @@
                             }
                         }
                     });
+
+                    console.log('[StatusCheck] Status check completed successfully');
+                } else {
+                    console.warn('[StatusCheck] Response success=false:', data);
                 }
             } catch (error) {
-                console.error('Status check failed:', error);
+                console.error('[StatusCheck] Status check failed:', error);
                 // Leave indicators gray if check fails
             }
         }

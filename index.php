@@ -4,8 +4,13 @@ declare(strict_types=1);
 
 // Load configuration and autoloader
 require_once __DIR__ . '/config/constants.php';
-require_once __DIR__ . '/config/version.php';
+// Note: version.php is loaded by constants.php
 require_once __DIR__ . '/config/database.php';
+
+// Load Composer autoloader for external dependencies
+if (file_exists(__DIR__ . '/vendor/autoload.php')) {
+    require_once __DIR__ . '/vendor/autoload.php';
+}
 require_once __DIR__ . '/app/helpers/Security.php';
 require_once __DIR__ . '/app/helpers/Auth.php';
 require_once __DIR__ . '/app/helpers/View.php';
@@ -26,6 +31,15 @@ if (file_exists(__DIR__ . '/app/widgets/Widget.php')) {
     }
 }
 
+// Reason: Load command system files (required by CommandWidget)
+if (file_exists(__DIR__ . '/app/models/CommandHost.php')) {
+    require_once __DIR__ . '/app/models/CommandHost.php';
+    require_once __DIR__ . '/app/models/CommandTemplate.php';
+    require_once __DIR__ . '/app/models/CommandExecution.php';
+    require_once __DIR__ . '/app/helpers/CredentialEncryption.php';
+    require_once __DIR__ . '/app/helpers/CommandValidator.php';
+}
+
 // Start session
 Auth::startSession();
 
@@ -37,10 +51,15 @@ $requestMethod = $_SERVER['REQUEST_METHOD'] ?? 'GET';
 $parsedUrl = parse_url($requestUri);
 $path = $parsedUrl['path'] ?? '/';
 
-// Remove the base path if present
-$basePath = '/dashboard';
-if (strpos($path, $basePath) === 0) {
-    $path = substr($path, strlen($basePath));
+// Determine the base path to strip from REQUEST_URI
+// This is the actual filesystem path where the app is installed
+$scriptName = $_SERVER['SCRIPT_NAME'] ?? '/index.php';
+$scriptBasePath = str_replace('\\', '/', dirname($scriptName));
+$scriptBasePath = ($scriptBasePath === '/' || $scriptBasePath === '.') ? '' : $scriptBasePath;
+
+// Remove the script base path if present in the request path
+if (!empty($scriptBasePath) && strpos($path, $scriptBasePath) === 0) {
+    $path = substr($path, strlen($scriptBasePath));
 }
 
 // Normalize path
@@ -63,6 +82,14 @@ try {
         require_once __DIR__ . '/app/controllers/ItemController.php';
         $controller = new PageController();
         $controller->settings();
+        exit;
+    }
+
+    if ($path === '/settings/update' && $requestMethod === 'POST') {
+        Auth::requireAdmin();
+        require_once __DIR__ . '/app/controllers/PageController.php';
+        $controller = new PageController();
+        $controller->updateGlobalSettings();
         exit;
     }
 
@@ -199,6 +226,135 @@ try {
             $controller->reorder();
         } elseif ($path === '/widgets/clean-cache' && $requestMethod === 'POST') {
             $controller->cleanCache();
+        } else {
+            View::notFound();
+        }
+        exit;
+    }
+
+    // File sharing routes
+    if (strpos($path, '/files') === 0) {
+        require_once __DIR__ . '/app/helpers/FileHelper.php';
+        require_once __DIR__ . '/app/models/SharedFile.php';
+        require_once __DIR__ . '/app/models/SharedFileAccessLog.php';
+        require_once __DIR__ . '/app/controllers/FileShareController.php';
+
+        $controller = new FileShareController();
+
+        // All admin routes require authentication
+        if ($path === '/files' || $path === '/files/') {
+            Auth::requireAdmin();
+            $controller->index();
+        } elseif ($path === '/files/upload' && $requestMethod === 'GET') {
+            Auth::requireAdmin();
+            $controller->upload();
+        } elseif ($path === '/files/upload' && $requestMethod === 'POST') {
+            Auth::requireAdmin();
+            $controller->store();
+        } elseif ($path === '/files/edit' && $requestMethod === 'GET') {
+            Auth::requireAdmin();
+            $controller->edit();
+        } elseif ($path === '/files/update' && $requestMethod === 'POST') {
+            Auth::requireAdmin();
+            $controller->update();
+        } elseif ($path === '/files/delete' && $requestMethod === 'POST') {
+            Auth::requireAdmin();
+            $controller->delete();
+        } elseif ($path === '/files/cleanup' && $requestMethod === 'POST') {
+            Auth::requireAdmin();
+            $controller->cleanup();
+        } else {
+            View::notFound();
+        }
+        exit;
+    }
+
+    // Public share link routes (/s/{token})
+    if (preg_match('#^/s/([a-f0-9]{64})$#', $path, $matches)) {
+        require_once __DIR__ . '/app/helpers/FileHelper.php';
+        require_once __DIR__ . '/app/models/SharedFile.php';
+        require_once __DIR__ . '/app/models/SharedFileAccessLog.php';
+        require_once __DIR__ . '/app/controllers/FileShareController.php';
+
+        $_GET['token'] = $matches[1];
+        $controller = new FileShareController();
+        $controller->show();
+        exit;
+    }
+
+    // Password verification route (AJAX, public)
+    if (preg_match('#^/s/([a-f0-9]{64})/verify$#', $path, $matches) && $requestMethod === 'POST') {
+        require_once __DIR__ . '/app/helpers/FileHelper.php';
+        require_once __DIR__ . '/app/models/SharedFile.php';
+        require_once __DIR__ . '/app/models/SharedFileAccessLog.php';
+        require_once __DIR__ . '/app/controllers/FileShareController.php';
+
+        $_POST['token'] = $matches[1];
+        $controller = new FileShareController();
+        $controller->verifyPassword();
+        exit;
+    }
+
+    // Download route (public)
+    if (preg_match('#^/s/([a-f0-9]{64})/download$#', $path, $matches)) {
+        require_once __DIR__ . '/app/helpers/FileHelper.php';
+        require_once __DIR__ . '/app/models/SharedFile.php';
+        require_once __DIR__ . '/app/models/SharedFileAccessLog.php';
+        require_once __DIR__ . '/app/controllers/FileShareController.php';
+
+        $_GET['token'] = $matches[1];
+        $controller = new FileShareController();
+        $controller->download();
+        exit;
+    }
+
+    // Command execution routes
+    if (strpos($path, '/commands') === 0) {
+        // Reason: Load additional command execution dependencies (models/helpers already loaded globally)
+        require_once __DIR__ . '/app/services/transport/TransportInterface.php';
+        require_once __DIR__ . '/app/services/transport/SshTransport.php';
+        require_once __DIR__ . '/app/services/transport/TransportFactory.php';
+        require_once __DIR__ . '/app/services/CommandExecutor.php';
+        require_once __DIR__ . '/app/controllers/CommandController.php';
+
+        // Reason: Execute endpoint handles auth internally to return JSON errors for AJAX
+        if ($path === '/commands/execute' && $requestMethod === 'POST') {
+            CommandController::execute();
+            exit;
+        }
+
+        // All other command routes require admin authentication
+        Auth::requireAdmin();
+
+        if ($path === '/commands' || $path === '/commands/') {
+            CommandController::index();
+        } elseif ($path === '/commands/hosts' && $requestMethod === 'GET') {
+            CommandController::hosts();
+        } elseif ($path === '/commands/templates' && $requestMethod === 'GET') {
+            CommandController::templates();
+        } elseif ($path === '/commands/history' && $requestMethod === 'GET') {
+            CommandController::history();
+        } elseif ($path === '/commands/hosts/create' && $requestMethod === 'POST') {
+            CommandController::storeHost();
+        } elseif ($path === '/commands/hosts/update' && $requestMethod === 'POST') {
+            CommandController::updateHost();
+        } elseif ($path === '/commands/hosts/get' && $requestMethod === 'GET') {
+            CommandController::getHost();
+        } elseif ($path === '/commands/hosts/delete' && $requestMethod === 'POST') {
+            CommandController::deleteHost();
+        } elseif ($path === '/commands/hosts/test' && $requestMethod === 'POST') {
+            CommandController::testConnection();
+        } elseif ($path === '/commands/templates/create' && $requestMethod === 'POST') {
+            CommandController::storeTemplate();
+        } elseif ($path === '/commands/templates/update' && $requestMethod === 'POST') {
+            CommandController::updateTemplate();
+        } elseif ($path === '/commands/templates/delete' && $requestMethod === 'POST') {
+            CommandController::deleteTemplate();
+        } elseif ($path === '/commands/templates/compatible' && $requestMethod === 'GET') {
+            CommandController::getCompatibleTemplates();
+        } elseif (preg_match('#^/commands/execution/(\d+)$#', $path, $matches)) {
+            $_GET['id'] = $matches[1];
+            CommandController::showExecution();
         } else {
             View::notFound();
         }

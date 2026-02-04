@@ -2,6 +2,11 @@
     <div class="flex justify-between items-center">
         <h2 class="text-2xl font-bold text-gray-900 dark:text-white">Settings</h2>
         <div class="flex space-x-3">
+            <a href="<?= View::url('/files') ?>"
+               class="inline-flex items-center px-4 py-2 border border-purple-300 dark:border-purple-600 rounded-md text-sm font-medium text-purple-700 dark:text-purple-300 bg-white dark:bg-gray-700 hover:bg-purple-50 dark:hover:bg-purple-900/20 transition-colors">
+                <i data-lucide="share-2" class="w-4 h-4 mr-2"></i>
+                File Sharing
+            </a>
             <a href="<?= View::url('/commands') ?>"
                class="inline-flex items-center px-4 py-2 border border-purple-300 dark:border-purple-600 rounded-md text-sm font-medium text-purple-700 dark:text-purple-300 bg-white dark:bg-gray-700 hover:bg-purple-50 dark:hover:bg-purple-900/20 transition-colors">
                 <i data-lucide="terminal" class="w-4 h-4 mr-2"></i>

@@ -1,0 +1,2 @@
+# This file keeps the /data/files directory in git
+# Actual uploaded files are excluded via .gitignore

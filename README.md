@@ -9,8 +9,9 @@ A lightweight, self-hostable personal dashboard built with standalone PHP 8.3+, 
 - **Dynamic Widgets**: 7 widget types for displaying real-time information (IP, Weather, System Stats, Clock, Notes, RSS, Proxmox)
 - **Page-Level Privacy**: Password-protect individual pages or use global admin access
 - **Item-Level Privacy**: Password-protect individual service items
+- **File Sharing**: Upload files with shareable URLs, expiration dates, and optional password protection
 - **Custom Icons**: Upload your own SVG icons or use 1000+ built-in Lucide icons
-- **Easy Management**: Full CRUD interface for pages, items, and widgets
+- **Easy Management**: Full CRUD interface for pages, items, widgets, and files
 - **Auto-Refresh**: Widgets automatically update with configurable refresh intervals
 - **Responsive Design**: Works seamlessly on desktop, tablet, and mobile
 - **Dark Mode**: Automatic dark mode based on system preferences
@@ -28,28 +29,38 @@ A lightweight, self-hostable personal dashboard built with standalone PHP 8.3+, 
 
 ### Quick Start
 
-1. **Clone Repository**
-   ```bash
-   cd /var/www/html
-   git clone https://github.com/yourusername/homedash.git dashboard
-   cd dashboard
-   ```
+HomeDash supports flexible installation:
+- **Subdirectory** (`http://server.com/dashboard/`)
+- **Root/Subdomain** (`http://dashboard.example.com/`)
+- **Behind Reverse Proxy** (Nginx Proxy Manager, Cloudflare, etc.)
 
-2. **Set Permissions**
-   ```bash
-   sudo chown -R www-data:www-data /var/www/html/dashboard
-   sudo chmod 775 /var/www/html/dashboard/data
-   sudo chmod 775 /var/www/html/dashboard/public/icons
-   ```
+**Subdirectory Installation** (e.g., `http://server.com/dashboard`):
+```bash
+cd /var/www/html
+git clone https://github.com/yourusername/homedash.git dashboard
+cd dashboard
+sudo chown -R www-data:www-data .
+sudo chmod 775 data public/icons
+```
 
-3. **First Run Setup**
-   - Visit `http://your-server/dashboard` in your browser
-   - You'll be automatically redirected to the setup page
-   - Click "Begin Setup" to create database and sample data
-   - **Save the generated admin password** (shown only once!)
-   - Click "Go to Dashboard" to start using HomeDash
+**Root/Subdomain Installation** (e.g., `http://dashboard.example.com`):
+```bash
+cd /var/www/html  # or your DocumentRoot
+git clone https://github.com/yourusername/homedash.git .
+sudo chown -R www-data:www-data .
+sudo chmod 775 data public/icons
+```
 
-For complete installation instructions, updating, backup/restore, and troubleshooting, see **[INSTALL.md](INSTALL.md)**.
+**First Run Setup** (both installations):
+- Visit your dashboard URL in a browser
+- You'll be automatically redirected to the setup page
+- Click "Begin Setup" to create database and sample data
+- **Save the generated admin password** (shown only once!)
+- Click "Go to Dashboard" to start using HomeDash
+
+The application automatically detects its installation path and adjusts URLs accordingly. It also detects reverse proxy headers for clean URL generation when behind proxies.
+
+For complete installation instructions including **reverse proxy setup**, updating, backup/restore, and troubleshooting, see **[INSTALL.md](INSTALL.md)**.
 
 ### Updating HomeDash
 

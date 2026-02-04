@@ -1,0 +1,6 @@
+# Deny direct access to uploaded files
+# Files must be accessed through the FileShareController
+
+<Files *>
+    Deny from all
+</Files>

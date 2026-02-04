@@ -1,3 +1,6 @@
+# Environment configuration
+.env
+
 # Database files (user data)
 data/dashboard.db
 data/dashboard.db-shm
@@ -10,6 +13,11 @@ public/icons/*.svg
 # PHP session files
 data/sessions/*
 !data/sessions/.gitkeep
+
+# Uploaded shared files
+data/files/*
+!data/files/.gitkeep
+!data/files/.htaccess
 
 # Logs
 *.log
